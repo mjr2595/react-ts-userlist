@@ -1,35 +1,73 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import axios, { AxiosError, CanceledError } from "axios";
+import { useEffect, useState } from "react";
+
+interface User {
+  id: number;
+  name: string;
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [users, setUsers] = useState<User[]>([]);
+  const [error, setError] = useState("");
+  const [isLoading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // const fetchUsers = async () => {
+    //   try {
+    //     const res = await axios.get<User[]>("https://jsonplaceholder.typicode.com/users");
+    //     setUsers(res.data);
+    //   } catch (err) {
+    //     setError((err as AxiosError).message);
+    //   }
+    // };
+    // fetchUsers();
+
+    // get -> await promise -> res / err
+
+    const controller = new AbortController();
+
+    setLoading(true);
+
+    axios
+      .get<User[]>("https://jsonplaceholder.typicode.com/users", { signal: controller.signal })
+      .then((res) => {
+        setUsers(res.data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (err instanceof CanceledError) return;
+        setError(err.message);
+        setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const deleteUser = (user: User) => {
+    const originalUsers = [...users];
+    setUsers(users.filter((u) => u.id !== user.id));
+    axios.delete("https://jsonplaceholder.typicode.com/users/" + user.id).catch((err) => {
+      setError(err.message);
+      setUsers(originalUsers);
+    });
+  };
 
   return (
     <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      {error && <p className="text-danger">{error}</p>}
+      {isLoading && <div className="spinner-border"></div>}
+      <ul className="list-group">
+        {users.map((user) => (
+          <li key={user.id} className="list-group-item d-flex justify-content-between">
+            {user.name}
+            <button className="btn btn-outline-danger" onClick={() => deleteUser(user)}>
+              Delete
+            </button>
+          </li>
+        ))}
+      </ul>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
