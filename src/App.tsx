@@ -7,6 +7,8 @@ interface User {
 }
 
 function App() {
+  const baseUrl = "https://jsonplaceholder.typicode.com/users";
+
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState("");
   const [isLoading, setLoading] = useState(false);
@@ -29,7 +31,7 @@ function App() {
     setLoading(true);
 
     axios
-      .get<User[]>("https://jsonplaceholder.typicode.com/users", { signal: controller.signal })
+      .get<User[]>(baseUrl, { signal: controller.signal })
       .then((res) => {
         setUsers(res.data);
         setLoading(false);
@@ -46,16 +48,32 @@ function App() {
   const deleteUser = (user: User) => {
     const originalUsers = [...users];
     setUsers(users.filter((u) => u.id !== user.id));
-    axios.delete("https://jsonplaceholder.typicode.com/users/" + user.id).catch((err) => {
+    axios.delete(baseUrl + "/" + user.id).catch((err) => {
       setError(err.message);
       setUsers(originalUsers);
     });
+  };
+
+  const addUser = () => {
+    const originalUsers = [...users];
+    const newUser = { id: 0, name: "Realguy" };
+    setUsers([newUser, ...users]);
+    axios
+      .post(baseUrl, newUser)
+      .then(({ data: savedUser }) => setUsers([savedUser, ...users]))
+      .catch((err) => {
+        setError(err.message);
+        setUsers(originalUsers);
+      });
   };
 
   return (
     <>
       {error && <p className="text-danger">{error}</p>}
       {isLoading && <div className="spinner-border"></div>}
+      <button className="btn btn-primary mb-3" onClick={addUser}>
+        Add
+      </button>
       <ul className="list-group">
         {users.map((user) => (
           <li key={user.id} className="list-group-item d-flex justify-content-between">
